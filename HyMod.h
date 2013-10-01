@@ -15,9 +15,6 @@ You should have received a copy of the GNU Lesser General Public License
 along with the Rainfall-Runoff Models.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __hymod_h
-#define __hymod_h
-
 #include <iostream>
 #include <fstream>
 #include <math.h>
@@ -118,5 +115,3 @@ void Pdm03(int modelDay, int dataDay, HyModPars pars, MOPEXData data, HamonEvap 
 double Nash(double K, int N, double Qin, double *X);
 double snowDD(int modelDay, int dataDay, MOPEXData data, SnowDDPars pars, SnowDDModel *snowModel);
 void calculateHamonPE(MOPEXData *data, int dataIndex, int nDays, HamonEvap *evap, int startDay);
-
-#endif

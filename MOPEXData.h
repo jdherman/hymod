@@ -15,12 +15,10 @@ You should have received a copy of the GNU Lesser General Public License
 along with the Rainfall-Runoff Models.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if defined(HYMOD) || defined(HBVMOD)
-
-#ifndef __mopexdata_h
-#define __mopexdata_h
-
+#include <iostream>
 #include <string>
+#include <fstream>
+#include <cstdlib>
 
 using namespace std;
 
@@ -47,10 +45,5 @@ struct MOPEXData
     //double *peAdjust;  //PE adjustment factors for each month
 };
 
+//Function to read in the MOPEX data (precip, flow, temp, AE, etc.)
 void readMOPEXData(MOPEXData *data, string filename);
-
-#endif
-
-#endif //HYMOD
-
-

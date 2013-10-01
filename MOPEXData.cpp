@@ -15,8 +15,6 @@ You should have received a copy of the GNU Lesser General Public License
 along with the Rainfall-Runoff Models.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if defined(HYMOD) || defined(HBVMOD)
-
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -143,6 +141,3 @@ void readMOPEXData(MOPEXData *data, string filename)
 
     return;
 }
-
-
-#endif //HYMOD
