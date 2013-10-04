@@ -1,7 +1,7 @@
-Rainfall-Runoff Models
-==========================
-Hymod, HBV, and SAC-SMA Models in C/C++
---------------------------
+###Hymod Rainfall-Runoff Model (C/C++)
+
+###Note: This is a work in progress. It will not be ready until this note has been removed.
+<!-- 
 Copyright (C) 2010-2012 Josh Kollat, Jon Herman, Patrick Reed and others. Licensed under the GNU Lesser General Public License.
 
 Citation:
@@ -41,4 +41,4 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU Lesser General Public License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with the Rainfall-Runoff Models.  If not, see <http://www.gnu.org/licenses/>.
+along with the Rainfall-Runoff Models.  If not, see <http://www.gnu.org/licenses/>. -->
