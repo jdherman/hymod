@@ -19,7 +19,7 @@ To compile and run:
 
 Arguments:
 * `my_forcing_data.txt`: see the `example_data` directory for the format being used
-* `my_parameter_samples.txt`: parameter sets to be evaluated in the model, with one parameter per column. Currently there are 8 parameters being read into the model, which would correspond to 8 columns per row of this file. The parameters are read from `stdin`, hence the `<` operator to pipe the contents of the file to the executable. 
+* `my_parameter_samples.txt`: parameter sets to be evaluated in the model, with one parameter per column. Currently there are 8 parameters being read into the model, which would correspond to 8 columns per row of this file. The parameters are read from `stdin`, hence the `<` operator to pipe the contents of the file to the executable. The order of parameters to be read in can be modified at `main.cpp:44`.
 
 In its current form, the model will output the total sum of Qobs, Qsimulated, and Precip. from the time period. However, the output can easily be modified to include any combination of states/fluxes from any time during the simulation.
 
