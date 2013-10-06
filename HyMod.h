@@ -28,10 +28,9 @@ along with the Rainfall-Runoff Models.  If not, see <http://www.gnu.org/licenses
 #include "MOPEXData.h"
 
 using namespace std;
-const double PI  =3.141592653589793238462;
+const double PI = 3.141592653589793238462;
 
-//HyMod parameters
-struct HyModPars
+struct hymod_parameters
 {
     //User specified parameters
     double Huz;      //Maximum height of soil moisture accounting tank - Range [0, Inf]
@@ -40,78 +39,53 @@ struct HyModPars
     int    Nq;       //Number of quickflow routing tanks               - Range [1, Inf] (typically set to <3)
     double Kq;       //Quickflow routing tanks' rate parameter         - Range [0, 1]
     double Ks;       //Slowflow routing tank's rate parameter          - Range [0, 1]
-    double Kv;       //Vegetation adjustment to PE                     - Range [0, 2]
-    //Calculated parameters
-    double b;        //Unscaled distribution function shape parameter (calculated from B)
-    double Cpar;     //Maximum combined contents of all stores (calculated from Huz and b)
-};
 
-//Degree-day snow parameters
-struct SnowDDPars
-{
-    bool useSnowDD;     //Flag to indicate if degree day snow model is in use
-    //User specified snow parameters
+    // Snow parameters (degree-day model)
     double DDF;        //Degree day factor                        - Range [ 0, 2]
     double Tth;        //Temperature threshold                    - Range [-5, 5] 
     double Tb;         //Base temperature to calculate melt       - Range [-5, 5]
+
+    // Given/calculated parameters
+    double Kv;       //Vegetation adjustment to PE                     - Range [0, 2]
+    double Cpar;     //Maximum combined contents of all stores (calculated from Huz and b)
 };
 
-//HyMod state initialization variables
-struct HyModInStates
+struct hymod_states
 {
-    double XCuz;  //Soil moisture accounting tank state contents - Dim(1 x 1)
-    double *Xq;   //Quickflow routing tanks state contents       - Dim(1 x Nq)
-    double  Xs;   //Slowflow routing tank state contents         - Dim (1 x 1)
-};
-
-//HyMod model
-struct HyModModel
-{
-    double *effPrecip;   //Effective rain entering the SMA model (melt+precip if using snow model)
     double *XHuz;        //Model computed upper zone soil moisture tank state height
     double *XCuz;        //Model computed upper zone soil moisture tank state contents
     double **Xq;         //Model computed quickflow tank states contents
     double *Xs;          //Model computed slowflow tank state contents
+    double *snow_store;      //State of snow reservoir
+};
+
+struct hymod_fluxes
+{
+    double *effPrecip;   //Effective rain entering the SMA model (melt+precip if using snow model)
     double *AE;          //Model computed actual evapotranspiration flux
     double *OV;          //Model computed precipitation excess flux
     double *Qq;          //Model computed quickflow flux
     double *Qs;          //Model computed slowflow flux
     double *Q;           //Model computed total streamflow flux
+    double *snow;        //Daily snow
+    double *melt;        //Snow melt
+    double *PE;          // Potential ET (Hamon)
 };
 
-//Degree Day Snow model
-struct SnowDDModel
-{
-    double *snow;       //Daily snow
-    double *melt;       //Snow melt
-    double *store;      //State of snow reservoir
-};
-
-// Hamon Evap structure
-struct HamonEvap
-{
-    int day;
-    double P;
-    double dayLength;
-    double eStar;
-    double *PE;
-};
-
-//Main HyMod structure
 struct HyMod
 {
-    MOPEXData     data;
-    HyModPars     pars;
-    SnowDDPars    snowPars;
-    HyModInStates inState;
-    HyModModel    model;
-    SnowDDModel   snowModel;
-    HamonEvap     evap;
+    MOPEXData data;
+    hymod_parameters parameters;
+    hymod_states states;   
+    hymod_fluxes fluxes;
 };
 
+// Global hymod structure, accessible by all files
+extern struct HyMod hymod;
+
 //Function Prototypes
-void HyModMo(MOPEXData data, HamonEvap evap, int *period, int periodLength, HyModPars pars, SnowDDPars snowPars, HyModInStates inState, HyModModel *model, SnowDDModel *snowModel);
-void Pdm03(int modelDay, int dataDay, HyModPars pars, MOPEXData data, HamonEvap evap, HyModModel *model);
+void zero_states_and_fluxes(int ndays);
+void PDM_soil_moisture(int modelDay, int dataDay);
 double Nash(double K, int N, double Qin, double *X);
-double snowDD(int modelDay, int dataDay, MOPEXData data, SnowDDPars pars, SnowDDModel *snowModel);
-void calculateHamonPE(MOPEXData *data, int dataIndex, int nDays, HamonEvap *evap, int startDay);
+double snowDD(int modelDay, int dataDay);
+void calculateHamonPE(int dataIndex, int nDays, int startDay);

@@ -27,7 +27,6 @@ using namespace std;
 //Function to read in the MOPEX data (precip, flow, temp, AE, etc.)
 void readMOPEXData(MOPEXData *data, string filename)
 {
-
     ifstream in;
     string sJunk = "";
     int ijunk;
@@ -95,23 +94,6 @@ void readMOPEXData(MOPEXData *data, string filename)
     data->minTemp  = new double[data->nDays];
     data->avgTemp  = new double[data->nDays];
 
-    //Experimenting with reading in PE adjustment factors - Not tested
-    //data->peAdjust = new double[12];
-
-    ////Look for the <PE_ADJUST_START> key
-    //while (sJunk != "<PE_ADJUST_START>")
-    //{
-    //    in >>sJunk;
-    //}
-    //in.ignore(1000,'\n');
-    //for (int i=0; i<12; i++)
-    //{
-    //    in >> ijunk >> data->peAdjust[i];
-    //    in.ignore(1000,'\n');
-    //}
-    ////Return to the beginning of the file
-    //in.seekg(0, ios::beg);
-
     //Look for the <DATA_START> key
     while (sJunk != "<DATA_START>")
     {
@@ -136,8 +118,6 @@ void readMOPEXData(MOPEXData *data, string filename)
         data->avgTemp[i] = (data->maxTemp[i] + data->minTemp[i])/2.0;
     }
 
-    //Close the input file
     in.close();
-
     return;
 }

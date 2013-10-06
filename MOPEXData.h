@@ -22,17 +22,12 @@ along with the Rainfall-Runoff Models.  If not, see <http://www.gnu.org/licenses
 
 using namespace std;
 
-//MOPEX data structure
 struct MOPEXData
 {
     string ID;
     double gageLat;
     double gageLong;
     double DA;
-
-    //Starting and ending dates of data to read
-    int *dateStart;
-    int *dateEnd;
 
     int nDays;          //Number of days of data
     int **date;         //Date of data [year, month, day]
@@ -42,7 +37,6 @@ struct MOPEXData
     double *maxTemp;    //Maximum air temperature (Celsius) (should be daily)
     double *minTemp;    //Minimum air temperature (Celsius) (should be daily)
     double *avgTemp;    //Average air temperature (Celsius) (should be daily)
-    //double *peAdjust;  //PE adjustment factors for each month
 };
 
 //Function to read in the MOPEX data (precip, flow, temp, AE, etc.)

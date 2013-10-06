@@ -17,129 +17,60 @@ along with the Rainfall-Runoff Models.  If not, see <http://www.gnu.org/licenses
 
 #include "HyMod.h"
 
-/*
-%%=========================================================================
-%% INPUTS
-%%   data         = structure holding input data such as precip
-%%   period       = simulation period array holding the indices into the data array
-%%   periodLength = length of simulation period
-%%   pars         = HyMod parameters
-%%   snowPars     = Degree Day snow parameters
-%%   inState      = initial states of HyMod stores
-% OUTPUTS
-%%   model        = model computed variables - final values
-%%   snowModel    = snow model computed variables - final values
-%%=========================================================================
-*/
-
-void HyModMo(MOPEXData data, HamonEvap evap, int *period, int periodLength, 
-             HyModPars pars, SnowDDPars snowPars, HyModInStates inState, 
-             HyModModel *model, SnowDDModel *snowModel)
+void zero_states_and_fluxes(int ndays)
 {
-
-    //Initial state values for quickflow routing tanks
-    for (int i=0; i<pars.Nq; i++) model->Xq[0][i] = 0.0;
-
-    //Initial state value for slowflow routing tank
-    model->Xs[0] = 0.0;
-
-    //Initial height corresponding to SMA tank contents
-    model->XHuz[0] = 0.0;
-
-    //Calculate b
-    //pars.b = log(1-(pars.B/2.0))/log(0.5);  //We are taking out this scaling that assumes the upper limit of b is 2
-    pars.b = pars.B;
-
-    //Calculate maximum capacity of soil moisture accounting tank
-    pars.Cpar = pars.Huz / (1.0+pars.b);
-
-    //Run Model Simulation TIME Loop
-    int Nday = periodLength;
-    int dataDay;
-
-    for (int modelDay=0; modelDay<Nday; modelDay++)
+    for (int k=0; k < ndays; k++)
     {
-        //Since used as an index, we need to convert to zero indexing
-        //Note: the values contained in "period" are already zero based indices into the data array (i.e., don't subtract 1)
-        dataDay = period[modelDay];
+        hymod.fluxes.snow[k]  = 0.0;
+        hymod.fluxes.melt[k]  = 0.0;
+        hymod.fluxes.effPrecip[k] = 0.0;
+        hymod.fluxes.AE[k] = 0.0;
+        hymod.fluxes.OV[k] = 0.0;
+        hymod.fluxes.Qq[k] = 0.0;
+        hymod.fluxes.Qs[k] = 0.0;
+        hymod.fluxes.Q[k]  = 0.0;
 
-        //Run snow model if needed
-        if (snowPars.useSnowDD == true) 
-        {
-            model->effPrecip[modelDay] = snowDD(modelDay, dataDay, data, snowPars, snowModel);
-        }
-        //If not, the effective precip is just the actual precip
-        else 
-        {
-			model->effPrecip[modelDay] = (data.precip[dataDay]);
-        }
-
-        //Run Pdm soil moisture accounting including evapotranspiration
-        Pdm03(modelDay, dataDay, pars, data, evap, model);
-
-        //Run Nash Cascade routing of quickflow component
-        model->Qq[modelDay] = Nash(pars.Kq, pars.Nq, pars.alpha*model->OV[modelDay], model->Xq[modelDay]);
-
-        //Run Nash Cascade routing of slowflow component
-        model->Qs[modelDay] = Nash(pars.Ks, 1, (1.0-pars.alpha)*model->OV[modelDay], &model->Xs[modelDay]);
-
-        //Set the intial states of the next time step to those of the current time step
-        if (modelDay<Nday-1)
-        {
-            //Carry the Hymod states to the next time step
-            model->XHuz[modelDay+1] = model->XHuz[modelDay];
-            model->Xq[modelDay+1]   = model->Xq[modelDay];
-            model->Xs[modelDay+1]   = model->Xs[modelDay];
-            //And be sure to carry the snow storage to the next time step
-            snowModel->store[modelDay+1] = snowModel->store[modelDay];
-        }
+        hymod.states.snow_store[k] = 0.0;
+        hymod.states.XHuz[k]      = 0.0;
+        hymod.states.XCuz[k] = 0.0;
+        hymod.states.Xs[k] = 0.0;
+        for (int m=0; m < hymod.parameters.Nq; m++) hymod.states.Xq[k][m] = 0.0;
     }
-
-    //Finalize variables   
-    for (int modelDay=0; modelDay<Nday; modelDay++)
-    {
-        //Model computed total streamflow flux
-        model->Q[modelDay] = model->Qq[modelDay] + model->Qs[modelDay];
-    }
-
     return;
-
 }
 
-void Pdm03(int modelDay, int dataDay, HyModPars pars, MOPEXData data, HamonEvap evap, HyModModel *model)
+
+void PDM_soil_moisture(int modelDay, int dataDay)
 {
-    double Cbeg, OV2, PPinf, Hint, Cint, OV1;
-    //double Sbeg, u1k, u2k, r_star, Ck, Sk;
+    double Cbeg, OV2, PPinf, Hint, Cint, OV1; // temporary variables for intermediate calculations
     
-    //Storage contents at begining
-    Cbeg = pars.Cpar * (1.0 - pow(1.0-(model->XHuz[modelDay]/pars.Huz),1.0+pars.b));
+    // Storage contents at begining
+    Cbeg = hymod.parameters.Cpar * (1.0 - pow(1.0-(hymod.states.XHuz[modelDay]/hymod.parameters.Huz),1.0+hymod.parameters.B));
 
-    //Compute effective rainfall filling all storage elements
-    OV2 = max(0.0, model->effPrecip[modelDay] + model->XHuz[modelDay] - pars.Huz);
+    // Compute overflow from soil moisture storage element
+    OV2 = max(0.0, hymod.fluxes.effPrecip[modelDay] + hymod.states.XHuz[modelDay] - hymod.parameters.Huz);
 
-    //Remaining net rainfall
-    PPinf = model->effPrecip[modelDay] - OV2;
+    // Remaining net rainfall
+    PPinf = hymod.fluxes.effPrecip[modelDay] - OV2;
 
-    //New actual height
-    Hint = min(pars.Huz, model->XHuz[modelDay]+PPinf);
+    // New actual height in the soil moisture storage element
+    Hint = min(hymod.parameters.Huz, hymod.states.XHuz[modelDay] + PPinf);
 
-    //New storage content
-    Cint = pars.Cpar*(1.0-pow(1.0-(Hint/pars.Huz),1.0+pars.b));
+    // New storage content
+    Cint = hymod.parameters.Cpar*(1.0-pow(1.0-(Hint/hymod.parameters.Huz),1.0+hymod.parameters.B));
 
-    //Additional effective rainfall produced by stores smaller than Cmax
+    // Additional effective rainfall produced by overflow from stores smaller than Cmax
     OV1 = max(0.0, PPinf + Cbeg - Cint);
 
-    //Compute total effective rainfall
-    model->OV[modelDay] = OV1 + OV2;
+    // Compute total overflow from soil moisture storage element
+    hymod.fluxes.OV[modelDay] = OV1 + OV2;
     
-    //Computer actual evapotranspiration
-    model->AE[modelDay] = min(Cint,(Cint/pars.Cpar)*evap.PE[modelDay]*pars.Kv);
+    // Compute actual evapotranspiration
+    hymod.fluxes.AE[modelDay] = min(Cint, (Cint/hymod.parameters.Cpar)*hymod.fluxes.PE[modelDay]*hymod.parameters.Kv);
     
-    //Storage contents after ET
-    model->XCuz[modelDay] = max(0.0,Cint - model->AE[modelDay]);
-    
-    //Compute final height of the reservoir
-    model->XHuz[modelDay] = pars.Huz*(1.0-pow(1.0-(model->XCuz[modelDay]/pars.Cpar),1.0/(1.0+pars.b)));
+    // Storage contents and height after ET occurs
+    hymod.states.XCuz[modelDay] = max(0.0, Cint - hymod.fluxes.AE[modelDay]);
+    hymod.states.XHuz[modelDay] = hymod.parameters.Huz*(1.0-pow(1.0-(hymod.states.XCuz[modelDay]/hymod.parameters.Cpar),1.0/(1.0+hymod.parameters.B)));
 
     return;
 
@@ -147,7 +78,6 @@ void Pdm03(int modelDay, int dataDay, HyModPars pars, MOPEXData data, HamonEvap 
 
 double Nash(double K, int N, double Qin, double *X)
 {
-    
     //Initialization
     double *OO = new double[N];
     double Qout;                       //Flow out of series of reservoirs
@@ -162,93 +92,78 @@ double Nash(double K, int N, double Qin, double *X)
         else        X[Res] = X[Res] + OO[Res-1];
     }
 
-    //Get Qout
+    // The outflow from the cascade is the outflow from the last reservoir
     Qout = OO[N-1];
-
-    //Clean up
     delete[] OO;
-
-    //Return the flow output
     return Qout;
-
 }
 
-double snowDD(int modelDay, int dataDay, MOPEXData data, SnowDDPars pars, SnowDDModel *snowModel)
+double snowDD(int modelDay, int dataDay)
 {
+    double Qout; // effective precip after freezing/melting
 
-    double Qout;
-
-    //If temperature is lower than threshold...
-    if (data.avgTemp[dataDay] < pars.Tth)
+    //If temperature is lower than threshold, precip is all snow
+    if (hymod.data.avgTemp[dataDay] < hymod.parameters.Tth)
     {
-        //Precip is all snow
-        snowModel->snow[modelDay] = data.precip[dataDay];
-        //And there is no rain
+        hymod.fluxes.snow[modelDay] = hymod.data.precip[dataDay];
         Qout = 0.0;
     }
-    //Otherwise...
-    else
+    else //Otherwise, there is no snow and it's all rain
     {
-        //There is no snow
-        snowModel->snow[modelDay] = 0.0;
-        //And it is all rain
-        Qout = data.precip[dataDay];
+        hymod.fluxes.snow[modelDay] = 0.0;
+        Qout = hymod.data.precip[dataDay];
     }
 
     //Add to the snow storage for this day
-    snowModel->store[modelDay] += snowModel->snow[modelDay];
+    hymod.states.snow_store[modelDay] += hymod.fluxes.snow[modelDay];
 
-    //Snow melt occurs if we are above the base temperature
-    if (data.avgTemp[dataDay] > pars.Tb)
+    //Snow melt occurs if we are above the base temperature (either a fraction of the store, or the whole thing)
+    if (hymod.data.avgTemp[dataDay] > hymod.parameters.Tb)
     {
-        //Snow melt is either a fraction of the store, or the whole thing
-        snowModel->melt[modelDay] = min(pars.DDF*(data.avgTemp[dataDay]-pars.Tb),snowModel->store[modelDay]);
+        hymod.fluxes.melt[modelDay] = min(hymod.parameters.DDF*(hymod.data.avgTemp[dataDay]-hymod.parameters.Tb), hymod.states.snow_store[modelDay]);
     }
-    //Otherwise
+    //Otherwise, snowmelt is zero
     else
     {
-        //Snow melt is zero
-        snowModel->melt[modelDay] = 0.0;
+        hymod.fluxes.melt[modelDay] = 0.0;
     }
 
     //Update the snow storage depending on melt
-    snowModel->store[modelDay] -= snowModel->melt[modelDay];
-    if (snowModel->store[modelDay] < 0.0) snowModel->store[modelDay] = 0.0;
+    hymod.states.snow_store[modelDay] -= hymod.fluxes.melt[modelDay];
+    if(hymod.states.snow_store[modelDay] < 0.0) hymod.states.snow_store[modelDay] = 0.0;
 
     //Qout is any rain + snow melt
-    Qout += snowModel->melt[modelDay];
+    Qout += hymod.fluxes.melt[modelDay];
 
     return Qout;
 }
 
-void calculateHamonPE(MOPEXData *data, int dataIndex, int nDays, HamonEvap *evap, int startDay)
+void calculateHamonPE(int dataIndex, int nDays, int startDay)
 {
     int oldYear;
     int counter;
+    double evap_P, evap_day_length, evap_eStar;
 
-    evap->PE = new double [nDays];
+    hymod.fluxes.PE = new double [nDays];
 
     //Initialize the starting year
-    oldYear = data->date[dataIndex][0];
+    oldYear = hymod.data.date[dataIndex][0];
     counter = startDay-1;
 
     //Fill out each of the arrays
     for (int i=0; i<nDays; i++)
     {
-        
         //If the years hasn't changed, increment counter
-        if (data->date[dataIndex+i][0] == oldYear) counter++;
+        if (hymod.data.date[dataIndex+i][0] == oldYear) counter++;
         //If it has changed, reset counter - this handles leap years
         else counter = 1;
 
-        evap->day = counter;
+        evap_P = asin(0.39795*cos(0.2163108 + 2.0 * atan(0.9671396*tan(0.00860*double(counter-186)))));
+        evap_day_length = 24.0 - (24.0/PI)*(acos((sin(0.8333*PI/180.0)+sin(hymod.data.gageLat*PI/180.0)*sin(evap_P))/(cos(hymod.data.gageLat*PI/180.0)*cos(evap_P))));
+        evap_eStar = 0.6108*exp((17.27*hymod.data.avgTemp[dataIndex+i])/(237.3+hymod.data.avgTemp[dataIndex+i]));
+        hymod.fluxes.PE[i] = (715.5*evap_day_length*evap_eStar/24.0)/(hymod.data.avgTemp[dataIndex+i] + 273.2);
 
-        evap->P = asin(0.39795*cos(0.2163108 + 2.0 * atan(0.9671396*tan(0.00860*double(evap->day-186)))));
-        evap->dayLength = 24.0 - (24.0/PI)*(acos((sin(0.8333*PI/180.0)+sin(data->gageLat*PI/180.0)*sin(evap->P))/(cos(data->gageLat*PI/180.0)*cos(evap->P))));
-        evap->eStar = 0.6108*exp((17.27*data->avgTemp[dataIndex+i])/(237.3+data->avgTemp[dataIndex+i]));
-        evap->PE[i] = (715.5*evap->dayLength*evap->eStar/24.0)/(data->avgTemp[dataIndex+i] + 273.2);
-
-        oldYear = data->date[dataIndex+i][0];
+        oldYear = hymod.data.date[dataIndex+i][0];
     }
 
     return;
