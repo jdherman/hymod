@@ -39,6 +39,48 @@ void zero_states_and_fluxes(int ndays)
     return;
 }
 
+// Allocate time series arrays for states, fluxes, and forcing data
+void hymod_allocate(int ndays)
+{
+    hymod.states.snow_store     = new double [ndays];
+    hymod.states.XHuz = new double [ndays];
+    hymod.states.XCuz = new double [ndays];
+    hymod.states.Xs   = new double [ndays];
+    hymod.states.Xq   = new double* [ndays];
+    for (int i=0; i < ndays; i++) 
+        hymod.states.Xq[i] = new double[hymod.parameters.Nq];
+
+    hymod.fluxes.snow           = new double [ndays];
+    hymod.fluxes.melt           = new double [ndays];
+    hymod.fluxes.effPrecip      = new double [ndays];
+    hymod.fluxes.AE             = new double [ndays];
+    hymod.fluxes.OV             = new double [ndays];
+    hymod.fluxes.Qq             = new double [ndays];
+    hymod.fluxes.Qs             = new double [ndays];
+    hymod.fluxes.Q              = new double [ndays];
+    hymod.fluxes.PE = new double [ndays];
+}
+
+// clean up memory
+void hymod_delete(int ndays) 
+{
+    delete[] hymod.fluxes.snow;
+    delete[] hymod.fluxes.melt;
+    delete[] hymod.states.snow_store;
+    
+    delete[] hymod.fluxes.effPrecip;
+    delete[] hymod.states.XHuz;
+    delete[] hymod.states.XCuz;
+    delete[] hymod.states.Xs;
+    delete[] hymod.fluxes.AE;
+    delete[] hymod.fluxes.OV;
+    delete[] hymod.fluxes.Qq;
+    delete[] hymod.fluxes.Qs;
+    delete[] hymod.fluxes.Q;
+    
+    for (int i=0; i < ndays; i++) delete[] hymod.states.Xq[i];
+    delete[] hymod.states.Xq;
+}
 
 void PDM_soil_moisture(int modelDay, int dataDay)
 {
@@ -143,8 +185,6 @@ void calculateHamonPE(int dataIndex, int nDays, int startDay)
     int oldYear;
     int counter;
     double evap_P, evap_day_length, evap_eStar;
-
-    hymod.fluxes.PE = new double [nDays];
 
     //Initialize the starting year
     oldYear = hymod.data.date[dataIndex][0];

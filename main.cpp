@@ -29,31 +29,11 @@ void init_hymod(string dataFile)
     hymod.data.nDays = nDays;
     hymod.parameters.Nq = 3; // number of quickflow reservoirs
     hymod.parameters.Kv = 1.0; // vegetation parameter
-
+    hymod_allocate(nDays);
     readMOPEXData(&hymod.data, dataFile);
 
     //Calculate the Hamon Potential Evaporation for the time series
     calculateHamonPE(startingIndex, nDays, dayStartIndex);
-
-    // Allocate time series for model states
-    hymod.states.snow_store     = new double [nDays];
-    hymod.states.XHuz = new double [nDays];
-    hymod.states.XCuz = new double [nDays];
-    hymod.states.Xs   = new double [nDays];
-    hymod.states.Xq   = new double* [nDays];
-    for (int i=0; i < nDays; i++) 
-        hymod.states.Xq[i] = new double[hymod.parameters.Nq];
-
-    // Allocate time series for model fluxes
-    hymod.fluxes.snow           = new double [nDays];
-    hymod.fluxes.melt           = new double [nDays];
-    hymod.fluxes.effPrecip      = new double [nDays];
-    hymod.fluxes.AE             = new double [nDays];
-    hymod.fluxes.OV             = new double [nDays];
-    hymod.fluxes.Qq             = new double [nDays];
-    hymod.fluxes.Qs             = new double [nDays];
-    hymod.fluxes.Q              = new double [nDays];
-
     return;
 }
 
@@ -112,26 +92,6 @@ void calc_hymod(double* parameters)
     return;
 }
 
-void finalize_hymod()
-{
-    delete[] hymod.fluxes.snow;
-    delete[] hymod.fluxes.melt;
-    delete[] hymod.states.snow_store;
-    
-    delete[] hymod.fluxes.effPrecip;
-    delete[] hymod.states.XHuz;
-    delete[] hymod.states.XCuz;
-    delete[] hymod.states.Xs;
-    delete[] hymod.fluxes.AE;
-    delete[] hymod.fluxes.OV;
-    delete[] hymod.fluxes.Qq;
-    delete[] hymod.fluxes.Qs;
-    delete[] hymod.fluxes.Q;
-    
-    for (int i=0; i < nDays; i++) delete[] hymod.states.Xq[i];
-	delete[] hymod.states.Xq;
-}
-
 int main(int argc, char **argv)
 {    
     int nParams = 8;
@@ -163,7 +123,7 @@ int main(int argc, char **argv)
             cout << "Observed: " << sumQobs << ", Simulated: " << sumQsim << ", Precip: " << sumPrecip << endl;
     }
 
-    finalize_hymod();
+    hymod_delete(nDays);
     delete[] parameters;
 
     return 0;

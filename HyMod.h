@@ -85,6 +85,8 @@ extern struct HyMod hymod;
 
 //Function Prototypes
 void zero_states_and_fluxes(int ndays);
+void hymod_allocate(int ndays);
+void hymod_delete(int ndays);
 void PDM_soil_moisture(int modelDay, int dataDay);
 double Nash(double K, int N, double Qin, double *X);
 double snowDD(int modelDay, int dataDay);
