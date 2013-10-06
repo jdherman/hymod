@@ -15,7 +15,8 @@
 
 TARGET = hymod
 CC = g++
-C_FLAGS = -O0 -g
+C_FLAGS = -O3
+# for debugging/valgrind: C_FLAGS = -O0 -g
 
 SOURCES=$(wildcard *.cpp)
 OBJECTS=$(SOURCES:.cpp=.o)

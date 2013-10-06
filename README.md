@@ -4,7 +4,7 @@
 
 Hymod Rainfall-Runoff Model, based on the Probability-Distributed Model concept ([Moore 2007](http://hal.archives-ouvertes.fr/hal-00305633/)). Runs on a daily timestep and saves all states and fluxes from each day for further analysis. Currently configured to read multiple parameter sets from `stdin` and evaluate them in order, but this can be easily modified for a different application.
 
-The model is mostly written in C (with structs instead of classes, for example), but uses a few C++ features for I/O. 
+The model is mostly written in C (with structs instead of classes, for example), but uses a few C++ features for I/O. It has been tested for conservation of mass, and Valgrind-ed (Valground?) for memory leaks.
 
 Contents:
 * `MOPEXData.cpp/h`: Read and store forcing data from the MOPEX dataset using the format shown in the `example_data` directory. This will not be needed for users who have their own forcing data in a different format.
