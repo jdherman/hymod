@@ -41,8 +41,9 @@ void init_hymod(string dataFile)
 void calc_hymod(double* parameters)
 {
     // assign parameter values for this run
-    hymod.parameters.Ks    = parameters[0]; //1.0 parameters[4]; //Ks is now specified in days
-    hymod.parameters.Kq    = parameters[1]; //1.0 parameters[3]; //Kq is now specified in days
+    // Rate constants Ks and Kq should be specified in units of time-1, 0 < Ks < Kq < 1
+    hymod.parameters.Ks    = parameters[0];
+    hymod.parameters.Kq    = parameters[1];
     hymod.parameters.DDF   = parameters[2];
     hymod.parameters.Tb    = parameters[3];
     hymod.parameters.Tth   = parameters[4];
